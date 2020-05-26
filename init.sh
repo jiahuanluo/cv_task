@@ -17,7 +17,7 @@
 #
 #basepath=$(cd `dirname $0`;pwd)
 
-#cd $(dirname $BASH_SOURCE)
+cd $(dirname $BASH_SOURCE)
 basepath=`echo $(pwd)`
 init() {
 
@@ -30,6 +30,7 @@ init() {
                 ;;
         \""Ubuntu\"")
                 echo "Ubuntu System"
+#		sudo apt-get install gcc g++ make  openssl supervisor libgmp-dev  libmpfr-dev libmpc-dev libaio1 libaio-dev numactl autoconf automake libtool libffi-dev libssl1.0.0 libssl-dev  liblz4-1 liblz4-dev liblz4-1-dbg liblz4-tool  zlib1g zlib1g-dbg zlib1g-dev
 		cd /usr/lib/x86_64-linux-gnu
 		if [ ! -f "libssl.so.10" ];then
 			   sudo ln -s libssl.so.1.0.0 libssl.so.10
@@ -59,7 +60,7 @@ export PATH=${basepath}/miniconda3-fate-1.1/bin:\$PATH" > ${basepath}/miniconda3
 	cd  $basepath/fate_flow
 	bash  service.sh restart
 	cd  $basepath/fateboard
-	bash service.sh restart
+	bash  service.sh restart
 	cd $basepath  
 }
 
