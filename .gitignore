@@ -1,4 +1,6 @@
 examples/data
+miniconda3-fate-1.1
+jdk
 *.jar
 *.png
 *.jpg
