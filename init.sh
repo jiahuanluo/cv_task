@@ -17,7 +17,7 @@
 #
 #basepath=$(cd `dirname $0`;pwd)
 
-cd $(dirname $BASH_SOURCE)
+#cd $(dirname $BASH_SOURCE)
 basepath=`echo $(pwd)`
 init() {
 
