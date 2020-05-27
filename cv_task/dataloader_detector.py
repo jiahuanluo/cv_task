@@ -440,13 +440,17 @@ def get_trainloader(phase, config, config_default, split_comber=None):
     return xgloader
 
 
-def get_dataset():
+def get_dataset(phase):
     data_config = parse_data_config("/home/locke/FATE/cv_task/cv_task/config/custom.data")
     train_path = data_config["train"]
     valid_path = data_config["valid"]
     class_names = load_classes(data_config["names"])
-    dataset = ListDataset(train_path, augment=True, multiscale=False)
-    return dataset
+    if phase == 'train':
+        dataset = ListDataset(train_path, augment=True, multiscale=True)
+    elif phase == 'valid':
+        dataset = ListDataset(valid_path, augment=False, multiscale=False)
+
+    return dataset, class_names
 
 if __name__ == 'main':
     # if True:

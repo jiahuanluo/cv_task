@@ -29,6 +29,7 @@ from federatedml.optim.convergence import converge_func_factory
 from federatedml.param.homo_nn_param import HomoNNParam
 from federatedml.util import consts
 from cv_task import dataloader_detector, net, models
+from cv_task.utils.utils import *
 import torch
 from torch.autograd import Variable
 from federatedml.nn.backend.pytorch.nn_model import PytorchNNModel
@@ -159,12 +160,14 @@ class HomoNNClient(HomoNNBase):
 
         self.data_converter = nn_model.get_data_converter(self.config_type)
         self.model_builder = nn_model.get_nn_builder(config_type=self.config_type)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
     def _is_converged(self, data, epoch_degree):
         if self.config_type=="cv":
             loss = data
         elif self.config_type == "yolo":
-            assert False
+            loss = data
         else:
             metrics = self.nn_model.evaluate(data)
             Logger.info(f"metrics at iter {self.aggregate_iteration_num}: {metrics}")
@@ -208,7 +211,7 @@ class HomoNNClient(HomoNNBase):
         elif self.config_type == "yolo":
             config_default = ObjDict(self.nn_define[0])
             model = models.get_model()
-            dataset_train = dataloader_detector.get_dataset()
+            dataset_train, _ = dataloader_detector.get_dataset('train')
             optimizer = torch.optim.Adam(model.parameters())
             self.nn_model = PytorchNNModel(model=model,
                                            optimizer=optimizer,
@@ -271,20 +274,25 @@ class HomoNNClient(HomoNNBase):
                                          pin_memory=False,
                                          collate_fn=dataset_train.collate_fn)
                 epoch_degree = float(len(trainloader))
+                self.nn_model._model.to(self.device)
                 self.nn_model._model.train()
+                metrics = []
+
                 for batch_i, (_, imgs, targets) in enumerate(trainloader):
-                    imgs = Variable(imgs)
-                    targets = Variable(targets, requires_grad=False)
+                    imgs = Variable(imgs.to(self.device))
+                    targets = Variable(targets.to(self.device), requires_grad=False)
 
                     loss, outputs = self.nn_model._model(imgs, targets)
                     loss.backward()
                     optimizer.step()
                     optimizer.zero_grad()
                     log_str = "---- [Batch %d/%d] ----" % (batch_i, len(trainloader))
-                    log_str += f"---- Total loss {loss.item()}\n"
+                    log_str += f"---- Total loss {loss.item()}"
+                    metrics.append(loss.item())
                     Logger.info(log_str)
                     # assert False
-
+                total_loss = np.mean(metrics)
+                data = total_loss
             else:
                 self.nn_model.train(data, aggregate_every_n_epoch=self.aggregate_every_n_epoch)
 
@@ -367,7 +375,48 @@ class HomoNNClient(HomoNNBase):
             print(msg)
             Logger.info(msg)
         elif self.config_type == "yolo":
-            assert False
+            dataset_valid, class_names = dataloader_detector.get_dataset('valid')
+            validloader = DataLoader(dataset_valid,
+                                     batch_size=1,
+                                     shuffle=False,
+                                     pin_memory=False,
+                                     collate_fn=dataset_valid.collate_fn)
+            self.nn_model._model.eval()
+            Logger.info("validate begin.")
+            labels = []
+            sample_metrics = []
+            for batch_i, (_, imgs, targets) in enumerate(validloader):
+                labels += targets[:, 1].tolist()
+                # Rescale target
+                targets[:, 2:] = xywh2xyxy(targets[:, 2:])
+                targets[:, 2:] *= 416
+
+                imgs = Variable(imgs.type(torch.FloatTensor).to(self.device), requires_grad=False)
+                with torch.no_grad():
+                    outputs = self.nn_model._model(imgs)
+                    outputs = non_max_suppression(outputs, conf_thres=0.5, nms_thres=0.5)
+                sample_metrics += get_batch_statistics(outputs, targets, iou_threshold=0.5)
+                # Concatenate sample statistics
+            if len(sample_metrics) == 0:
+                precision, recall, AP, f1, ap_class = np.array([0]), np.array([0]), np.array([0]), np.array([0]), np.array([0], dtype=np.int)
+            else:
+                true_positives, pred_scores, pred_labels = [np.concatenate(x, 0) for x in list(zip(*sample_metrics))]
+                precision, recall, AP, f1, ap_class = ap_per_class(true_positives, pred_scores, pred_labels, labels)
+            evaluation_metrics = [
+                ("val_precision", precision.mean()),
+                ("val_recall", recall.mean()),
+                ("val_mAP", AP.mean()),
+                ("val_f1", f1.mean()),
+            ]
+            Logger.info(evaluation_metrics)
+
+            # Print class APs and mAP
+            # ap_table = [["Index", "Class name", "AP"]]
+            # for i, c in enumerate(ap_class):
+            #     ap_table += [[c, class_names[c], "%.5f" % AP[i]]]
+            # Logger.info(AsciiTable(ap_table).table)
+            Logger.info(f"---- mAP {AP.mean()}")
+            # assert False
         else:
             data = self.data_converter.convert(data_inst, batch_size=self.batch_size)
             predict = self.nn_model.predict(data)
