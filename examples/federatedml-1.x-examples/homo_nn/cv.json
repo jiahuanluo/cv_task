@@ -73,7 +73,7 @@
   },
   "algorithm_parameters": {
     "homo_nn_0": {
-      "config_type": "cv",
+      "config_type": "yolo",
       "nn_define": [
        {
         "workers": 1,

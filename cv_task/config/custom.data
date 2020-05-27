@@ -1,0 +1,4 @@
+classes= 7
+train=/home/locke/FATE/cv_task/cv_task/data/custom/train.txt
+valid=/home/locke/FATE/cv_task/cv_task/data/custom/valid.txt
+names=/home/locke/FATE/cv_task/cv_task/data/custom/classes.names

@@ -28,11 +28,10 @@ from federatedml.nn.homo_nn.nn_model import restore_nn_model
 from federatedml.optim.convergence import converge_func_factory
 from federatedml.param.homo_nn_param import HomoNNParam
 from federatedml.util import consts
-from cv_task import dataloader_detector
+from cv_task import dataloader_detector, net, models
 import torch
 from torch.autograd import Variable
 from federatedml.nn.backend.pytorch.nn_model import PytorchNNModel
-from cv_task import net
 from torch.utils.data import DataLoader
 import numpy as np
 import time
@@ -164,6 +163,8 @@ class HomoNNClient(HomoNNBase):
     def _is_converged(self, data, epoch_degree):
         if self.config_type=="cv":
             loss = data
+        elif self.config_type == "yolo":
+            assert False
         else:
             metrics = self.nn_model.evaluate(data)
             Logger.info(f"metrics at iter {self.aggregate_iteration_num}: {metrics}")
@@ -204,7 +205,14 @@ class HomoNNClient(HomoNNBase):
                                            optimizer=optimizer,
                                            loss=loss)
             epoch_degree = float(len(dataset_train))*self.aggregate_every_n_epoch
-
+        elif self.config_type == "yolo":
+            model = models.get_model()
+            dataset_train = dataloader_detector.get_dataset()
+            optimizer = torch.optim.Adam(model.parameters())
+            self.nn_model = PytorchNNModel(model=model,
+                                           optimizer=optimizer,
+                                           loss=None)
+            epoch_degree = float(len(dataset_train))*self.aggregate_every_n_epoch
         else:
             data = self.data_converter.convert(data_inst, batch_size=self.batch_size)
             self.__build_nn_model(data.get_shape()[0])
@@ -255,6 +263,26 @@ class HomoNNClient(HomoNNBase):
                                  total_loss, classification_loss,
                                  bbox_regressiong_loss_1, bbox_regressiong_loss_2,
                                  bbox_regressiong_loss_3, bbox_regressiong_loss_4))
+            elif self.config_type == "yolo":
+                trainloader = DataLoader(dataset_train,
+                                         batch_size=config_default.batch_size,
+                                         shuffle=True,
+                                         pin_memory=False)
+                epoch_degree = float(len(trainloader))
+                self.nn_model._model.train()
+                for batch_i, (_, imgs, targets) in enumerate(dataloader):
+                    imgs = Variable(imgs.to(device))
+                    targets = Variable(targets.to(device), requires_grad=False)
+
+                    loss, outputs = self.nn_model._model(imgs, targets)
+                    loss.backward()
+                    optimizer.step()
+                    optimizer.zero_grad()
+                    log_str = "\n---- [Batch %d/%d] ----\n" % (batch_i, len(dataloader))
+                    log_str += f"\nTotal loss {loss.item()}"
+                    Logger.info(log_str)
+                    assert False
+
             else:
                 self.nn_model.train(data, aggregate_every_n_epoch=self.aggregate_every_n_epoch)
 
@@ -336,6 +364,8 @@ class HomoNNClient(HomoNNBase):
                       np.mean(metrics[:, 5]))
             print(msg)
             Logger.info(msg)
+        elif self.config_type == "yolo":
+            assert False
         else:
             data = self.data_converter.convert(data_inst, batch_size=self.batch_size)
             predict = self.nn_model.predict(data)

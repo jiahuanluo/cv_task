@@ -114,7 +114,8 @@ class PytorchNNModel(NNModel):
         self._model.load_state_dict(unboxed)
 
     def train(self, data: data.Dataset, **kwargs):
-        loss_fn = build_loss_fn(self._loss)
+        if self._loss is not None:
+            loss_fn = build_loss_fn(self._loss)
         optimizer = build_optimzer(self._optimizer, self._model)
         epochs = 1
         left_kwargs = copy.deepcopy(kwargs)
@@ -126,9 +127,10 @@ class PytorchNNModel(NNModel):
             for batch_id, (feature, label) in enumerate(train_data):
                 feature = torch.tensor(feature, dtype=torch.float32)
                 label = torch.tensor(label, dtype=torch.float32)
-                y_pre = self._model(feature)
+                loss = self._model(feature)
                 optimizer.zero_grad()
-                loss = loss_fn(y_pre, label)
+                if self._loss is not None:
+                    loss = loss_fn(loss, label)
                 loss.backward()
                 optimizer.step()
 

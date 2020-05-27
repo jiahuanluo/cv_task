@@ -78,6 +78,10 @@ def get_nn_builder(config_type):
     elif config_type == "cv":
         from cv_task import net
         return net.get_model()
+    elif config_type == "yolo":
+        from cv_task import models
+        return models.get_model()
+
     else:
         raise ValueError(f"{config_type} is not supported")
 

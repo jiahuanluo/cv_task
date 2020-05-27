@@ -8,6 +8,9 @@ import random
 from scipy.ndimage import zoom
 import warnings
 from scipy.ndimage.interpolation import rotate
+from .utils.utils import *
+from .utils.datasets import *
+from .utils.parse_config import *
 
 import pandas as pd
 import json
@@ -435,6 +438,15 @@ def get_trainloader(phase, config, config_default, split_comber=None):
     print('======', phase, "dataset constructed, len:", xgloader.__len__())
 
     return xgloader
+
+
+def get_dataset():
+    data_config = parse_data_config("/home/locke/FATE/cv_task/cv_task/config/custom.data")
+    train_path = data_config["train"]
+    valid_path = data_config["valid"]
+    class_names = load_classes(data_config["names"])
+    dataset = ListDataset(train_path, augment=True, multiscale=False)
+    return dataset
 
 if __name__ == 'main':
     # if True:
