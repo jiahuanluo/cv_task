@@ -4,6 +4,8 @@ jdk
 *.jar
 *.png
 *.jpg
+cv_task/data/custom/labels
+cv_task/data/custom/images
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

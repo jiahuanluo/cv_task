@@ -206,6 +206,7 @@ class HomoNNClient(HomoNNBase):
                                            loss=loss)
             epoch_degree = float(len(dataset_train))*self.aggregate_every_n_epoch
         elif self.config_type == "yolo":
+            config_default = ObjDict(self.nn_define[0])
             model = models.get_model()
             dataset_train = dataloader_detector.get_dataset()
             optimizer = torch.optim.Adam(model.parameters())
@@ -265,23 +266,24 @@ class HomoNNClient(HomoNNBase):
                                  bbox_regressiong_loss_3, bbox_regressiong_loss_4))
             elif self.config_type == "yolo":
                 trainloader = DataLoader(dataset_train,
-                                         batch_size=config_default.batch_size,
+                                         batch_size=2,
                                          shuffle=True,
-                                         pin_memory=False)
+                                         pin_memory=False,
+                                         collate_fn=dataset_train.collate_fn)
                 epoch_degree = float(len(trainloader))
                 self.nn_model._model.train()
-                for batch_i, (_, imgs, targets) in enumerate(dataloader):
-                    imgs = Variable(imgs.to(device))
-                    targets = Variable(targets.to(device), requires_grad=False)
+                for batch_i, (_, imgs, targets) in enumerate(trainloader):
+                    imgs = Variable(imgs)
+                    targets = Variable(targets, requires_grad=False)
 
                     loss, outputs = self.nn_model._model(imgs, targets)
                     loss.backward()
                     optimizer.step()
                     optimizer.zero_grad()
-                    log_str = "\n---- [Batch %d/%d] ----\n" % (batch_i, len(dataloader))
-                    log_str += f"\nTotal loss {loss.item()}"
+                    log_str = "---- [Batch %d/%d] ----" % (batch_i, len(trainloader))
+                    log_str += f"---- Total loss {loss.item()}\n"
                     Logger.info(log_str)
-                    assert False
+                    # assert False
 
             else:
                 self.nn_model.train(data, aggregate_every_n_epoch=self.aggregate_every_n_epoch)
