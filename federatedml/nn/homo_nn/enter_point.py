@@ -211,6 +211,7 @@ class HomoNNClient(HomoNNBase):
         elif self.config_type == "yolo":
             config_default = ObjDict(self.nn_define[0])
             model = models.get_model()
+            # model.load_darknet_weights("/home/locke/FATE/PyTorch-YOLOv3_bak/weights/darknet53.conv.74")
             dataset_train, _ = dataloader_detector.get_dataset('train')
             optimizer = torch.optim.Adam(model.parameters())
             self.nn_model = PytorchNNModel(model=model,
@@ -269,8 +270,9 @@ class HomoNNClient(HomoNNBase):
                                  bbox_regressiong_loss_3, bbox_regressiong_loss_4))
             elif self.config_type == "yolo":
                 trainloader = DataLoader(dataset_train,
-                                         batch_size=2,
+                                         batch_size=config_default.batch_size,
                                          shuffle=True,
+                                         num_workers=config_default.workers,
                                          pin_memory=False,
                                          collate_fn=dataset_train.collate_fn)
                 epoch_degree = float(len(trainloader))
@@ -297,12 +299,14 @@ class HomoNNClient(HomoNNBase):
                 self.nn_model.train(data, aggregate_every_n_epoch=self.aggregate_every_n_epoch)
 
             # send model for aggregate, then set aggregated model to local
+            self.nn_model._model.to( torch.device("cpu"))
             self.aggregator.send_weighted_model(weighted_model=self.nn_model.get_model_weights(),
                                                 weight=epoch_degree * self.aggregate_every_n_epoch,
                                                 suffix=self._suffix())
 
             weights = self.aggregator.get_aggregated_model(suffix=self._suffix())
             self.nn_model.set_model_weights(weights=weights)
+            self.nn_model._model.to(self.device)
             #calc loss and check convergence
             if self._is_converged(data, epoch_degree):
                 Logger.info(f"early stop at iter {self.aggregate_iteration_num}")

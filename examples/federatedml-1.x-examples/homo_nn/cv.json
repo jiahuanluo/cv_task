@@ -76,9 +76,9 @@
       "config_type": "yolo",
       "nn_define": [
        {
-        "workers": 1,
+        "workers": 2,
         "epochs":1,
-        "batch_size":1,
+        "batch_size":2,
         "lr": 0.01,
         "momentum": 0.9,
         "weight_decay":1e-4,
@@ -93,7 +93,7 @@
         "eps": 1e-4
       },
       "loss": "user_define",
-      "max_iter": 1
+      "max_iter": 100
     }
   }
 }

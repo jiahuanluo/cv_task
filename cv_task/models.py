@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
-
+import os
 from .utils.parse_config import *
 from .utils.utils import build_targets, to_cpu, non_max_suppression
 
@@ -348,4 +348,6 @@ class Darknet(nn.Module):
 
 
 def get_model():
-    return Darknet("/home/locke/FATE/cv_task/cv_task/config/yolov3-custom.cfg")
+    wd = os.getcwd()
+    model_config_path = os.path.join(wd, "../cv_task/config/yolov3-custom.cfg")
+    return Darknet(model_config_path)
