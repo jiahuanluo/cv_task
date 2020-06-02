@@ -45,7 +45,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import Sampler
 import numpy as np
 import time
-
+import os
 
 Logger = LoggerFactory.get_logger()
 MODEL_META_NAME = "HomoNNModelMeta"
@@ -235,7 +235,8 @@ class HomoNNClient(HomoNNBase):
             model = vgg16([i for i in range(0,7)], pretrained=False, class_agnostic=False)
 
             cfg.TRAIN.USE_FLIPPED = True
-            cfg_from_file("/home/locke/FATE/cv_task/cv_task/cfgs/vgg16.yml")
+            wd = os.getcwd()
+            cfg_from_file(os.path.join(wd, "../../cv_task/cv_task/cfgs/vgg16.yml"))
 
             imdb, roidb, ratio_list, ratio_index = combined_roidb("voc_2007_trainval")
             optimizer = torch.optim.Adam(model.parameters())
