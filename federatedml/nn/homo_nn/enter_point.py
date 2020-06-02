@@ -30,10 +30,19 @@ from federatedml.param.homo_nn_param import HomoNNParam
 from federatedml.util import consts
 from cv_task import dataloader_detector, net, models
 from cv_task.utils.utils import *
+
+from cv_task.lib.roi_data_layer.roidb import combined_roidb
+from cv_task.lib.roi_data_layer.roibatchLoader import roibatchLoader
+from cv_task.lib.model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
+from cv_task.lib.model.utils.net_utils import weights_normal_init, save_net, load_net, \
+      adjust_learning_rate, save_checkpoint, clip_gradient
+from cv_task.lib.model.faster_rcnn.vgg16 import vgg16
+
 import torch
 from torch.autograd import Variable
 from federatedml.nn.backend.pytorch.nn_model import PytorchNNModel
 from torch.utils.data import DataLoader
+from torch.utils.data.sampler import Sampler
 import numpy as np
 import time
 
@@ -161,12 +170,15 @@ class HomoNNClient(HomoNNBase):
         self.data_converter = nn_model.get_data_converter(self.config_type)
         self.model_builder = nn_model.get_nn_builder(config_type=self.config_type)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device("cpu")
 
 
     def _is_converged(self, data, epoch_degree):
         if self.config_type=="cv":
             loss = data
         elif self.config_type == "yolo":
+            loss = data
+        elif self.config_type == "faster":
             loss = data
         else:
             metrics = self.nn_model.evaluate(data)
@@ -218,6 +230,31 @@ class HomoNNClient(HomoNNBase):
                                            optimizer=optimizer,
                                            loss=None)
             epoch_degree = float(len(dataset_train))*self.aggregate_every_n_epoch
+        elif self.config_type == "faster":
+            config_default = ObjDict(self.nn_define[0])
+            model = vgg16([i for i in range(0,7)], pretrained=False, class_agnostic=False)
+
+            cfg.TRAIN.USE_FLIPPED = True
+            cfg_from_file("/home/locke/FATE/cv_task/cv_task/cfgs/vgg16.yml")
+
+            imdb, roidb, ratio_list, ratio_index = combined_roidb("voc_2007_trainval")
+            optimizer = torch.optim.Adam(model.parameters())
+            train_size = len(roidb)
+            sampler_batch = dataloader_detector.sampler(train_size, config_default.batch_size)
+            dataset = roibatchLoader(roidb, ratio_list, ratio_index, config_default.batch_size, 7, training=True)
+            trainloader = torch.utils.data.DataLoader(dataset, batch_size=config_default.batch_size, sampler=sampler_batch,
+                                                     num_workers=2)
+            im_data = Variable(torch.FloatTensor(1).to(self.device))
+            im_info = Variable(torch.FloatTensor(1).to(self.device))
+            num_boxes = Variable(torch.LongTensor(1).to(self.device))
+            gt_boxes = Variable(torch.FloatTensor(1).to(self.device))
+
+            model.create_architecture()
+            self.nn_model = PytorchNNModel(model=model,
+                                           optimizer=optimizer,
+                                           loss=None)
+            iters_per_epoch = int(train_size / config_default.batch_size)
+            epoch_degree = float(len(dataset))*self.aggregate_every_n_epoch
         else:
             data = self.data_converter.convert(data_inst, batch_size=self.batch_size)
             self.__build_nn_model(data.get_shape()[0])
@@ -295,6 +332,39 @@ class HomoNNClient(HomoNNBase):
                     # assert False
                 total_loss = np.mean(metrics)
                 data = total_loss
+            elif self.config_type == "faster":
+                epoch_degree = float(len(trainloader))
+                self.nn_model._model.to(self.device)
+                self.nn_model._model.train()
+                loss_temp = 0
+                data_iter = iter(trainloader)
+                for step in range(iters_per_epoch):
+                    data = next(data_iter)
+                    with torch.no_grad():
+                        im_data.resize_(data[0].size()).copy_(data[0])
+                        im_info.resize_(data[1].size()).copy_(data[1])
+                        gt_boxes.resize_(data[2].size()).copy_(data[2])
+                        num_boxes.resize_(data[3].size()).copy_(data[3])
+
+                    self.nn_model._model.zero_grad()
+                    rois, cls_prob, bbox_pred, \
+                    rpn_loss_cls, rpn_loss_box, \
+                    RCNN_loss_cls, RCNN_loss_bbox, \
+                    rois_label = self.nn_model._model(im_data, im_info, gt_boxes, num_boxes)
+
+                    loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
+                           + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
+                    # loss_temp += loss.item()
+
+                    # backward
+                    optimizer.zero_grad()
+                    loss.backward()
+                    clip_gradient(self.nn_model._model, 10.)
+                    optimizer.step()
+                    log_str = "---- [Batch %d/%d] ----" % (step, len(trainloader))
+                    log_str += f"---- Total loss {loss.item()}"
+
+
             else:
                 self.nn_model.train(data, aggregate_every_n_epoch=self.aggregate_every_n_epoch)
 

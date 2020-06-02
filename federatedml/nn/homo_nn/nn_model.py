@@ -81,7 +81,9 @@ def get_nn_builder(config_type):
     elif config_type == "yolo":
         from cv_task import models
         return models.get_model()
-
+    elif config_type == "faster":
+        from cv_task.lib.model.faster_rcnn.vgg16 import vgg16
+        return vgg16([i for i in range(0,7)], pretrained=False, class_agnostic=False)
     else:
         raise ValueError(f"{config_type} is not supported")
 
