@@ -114,7 +114,9 @@ class HomoNNParam(BaseParam):
         elif self.config_type == "yolo":
             for config in self.nn_define:
                 pb.nn_define.append(json.dumps(config))
-
+        elif self.config_type == "faster":
+            for config in self.nn_define:
+                pb.nn_define.append(json.dumps(config))
         pb.batch_size = self.batch_size
         pb.max_iter = self.max_iter
 
@@ -147,6 +149,10 @@ class HomoNNParam(BaseParam):
             for config in pb.nn_define:
                 self.nn_define.append(json.loads(config))
         elif self.config_type== "yolo":
+            self.nn_define.clear()
+            for config in pb.nn_define:
+                self.nn_define.append(json.loads(config))
+        elif self.config_type== "faster":
             self.nn_define.clear()
             for config in pb.nn_define:
                 self.nn_define.append(json.loads(config))

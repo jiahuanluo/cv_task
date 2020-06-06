@@ -1,6 +1,7 @@
 examples/data
 miniconda3-fate-1.1
 jdk
+fate_flow
 *.jar
 *.png
 *.jpg

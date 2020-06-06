@@ -230,7 +230,9 @@ class PytorchNNModel(NNModel):
     def export_model(self):
         f = tempfile.TemporaryFile()
         try:
-            torch.save(self._model, f)
+            save_dict = dict()
+            save_dict["model"] = self._model.state_dict()
+            torch.save(save_dict, f)
             f.seek(0)
             model_bytes = f.read()
             return model_bytes
