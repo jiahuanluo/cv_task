@@ -53,8 +53,15 @@ for image_set in sets:
         convert_annotation(image_id)
     list_file.close()
 class_names = open('custom/classes.names', 'w')
+
 for cls in classes:
     class_names.write(cls + '\n')
+data_config = open("../config/custom.data", "w")
+data_config.write("classes= 7\n")
+data_config.write("train=%s\n"%(os.path.join(wd, "custom/train.txt")))
+data_config.write("valid=%s\n"%(os.path.join(wd, "custom/test.txt")))
+data_config.write("test=%s\n"%(os.path.join(wd, "custom/test.txt")))
+data_config.write("names=%s\n"%(os.path.join(wd, "custom/classes.names")))
 # os.system("cat 2007_train.txt > train.txt")
 # os.system("cat 2007_test.txt > test.txt")
 
