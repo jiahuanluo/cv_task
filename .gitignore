@@ -5,8 +5,10 @@ fate_flow
 *.jar
 *.png
 *.jpg
-cv_task/data/custom/labels
-cv_task/data/custom/images
+cv_task/data/custom
+cv_task/data/VOCdevkit
+cv_task/data/Street_Dataset
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -31,12 +31,12 @@ from federatedml.util import consts
 from cv_task import dataloader_detector, net, models
 from cv_task.utils.utils import *
 
-from cv_task.lib.roi_data_layer.roidb import combined_roidb
-from cv_task.lib.roi_data_layer.roibatchLoader import roibatchLoader
-from cv_task.lib.model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
-from cv_task.lib.model.utils.net_utils import weights_normal_init, save_net, load_net, \
-      adjust_learning_rate, save_checkpoint, clip_gradient
-from cv_task.lib.model.faster_rcnn.vgg16 import vgg16
+# from cv_task.lib.roi_data_layer.roidb import combined_roidb
+# from cv_task.lib.roi_data_layer.roibatchLoader import roibatchLoader
+# from cv_task.lib.model.utils.config import cfg, cfg_from_file, cfg_from_list, get_output_dir
+# from cv_task.lib.model.utils.net_utils import weights_normal_init, save_net, load_net, \
+#       adjust_learning_rate, save_checkpoint, clip_gradient
+# from cv_task.lib.model.faster_rcnn.vgg16 import vgg16
 
 from cv_task.utils.config import opt
 from cv_task.data.dataset import Dataset, TestDataset, inverse_normalize
