@@ -235,7 +235,6 @@ class HomoNNClient(HomoNNBase):
         elif self.config_type == "yolo":
             config_default = ObjDict(self.nn_define[0])
             model = models.get_model()
-            # model.load_darknet_weights("/home/locke/FATE/PyTorch-YOLOv3_bak/weights/darknet53.conv.74")
             dataset_train, _ = dataloader_detector.get_dataset('train')
             optimizer = torch.optim.Adam(model.parameters())
             self.nn_model = PytorchNNModel(model=model,
