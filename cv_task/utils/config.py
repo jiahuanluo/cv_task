@@ -1,5 +1,5 @@
 from pprint import pprint
-
+import os
 
 # Default Configs for training
 # NOTE that, config items could be overwriten by passing argument through command line.
@@ -7,7 +7,8 @@ from pprint import pprint
 
 class Config:
     # data
-    voc_data_dir = '/home/locke/FATE/cv_task/cv_task/data/VOCdevkit/VOC2007/'
+    wd = os.getcwd()
+    voc_data_dir = os.path.join(wd, 'VOCdevkit', 'VOC2007')
     min_size = 600  # image resize
     max_size = 1000 # image resize
     num_workers = 8
